@@ -1,35 +1,25 @@
-package autotests;
+package autotests.clients;
 
+import autotests.EndpointConfig;
 import com.consol.citrus.TestCaseRunner;
-import com.consol.citrus.annotations.CitrusResource;
-import com.consol.citrus.annotations.CitrusTest;
+import com.consol.citrus.http.client.HttpClient;
 import com.consol.citrus.testng.spring.TestNGCitrusSpringSupport;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.testng.annotations.Optional;
-import org.testng.annotations.Test;
+import org.springframework.test.context.ContextConfiguration;
 
-import static com.consol.citrus.dsl.MessageSupport.MessageBodySupport.fromBody;
 import static com.consol.citrus.http.actions.HttpActionBuilder.http;
 
-public class DuckActionsTest extends TestNGCitrusSpringSupport {
+@ContextConfiguration(classes = {EndpointConfig.class})
+public class DuckActionsClient extends TestNGCitrusSpringSupport {
 
-    @Test(description = "Проверка того, что уточка поплыла")
-    @CitrusTest
-    public void successfulSwim(@Optional @CitrusResource TestCaseRunner runner) {
-        createDuck(runner, "yellow", 0.15, "rubber", "quack", "FIXED");
-        runner.$(http().client("http://localhost:2222")
-                .receive()
-                .response(HttpStatus.OK)
-                .message()
-                .extract(fromBody().expression("$.id", "duckId")));
-        duckSwim(runner, "${duckId}");
-        validateResponse(runner, "{\n" + "  \"message\": \"I'm swimming\"\n" + "}");
-    }
+    @Autowired
+    protected HttpClient yellowDuckService;
 
     //плыви, уточка!
     public void duckSwim(TestCaseRunner runner, String id) {
-        runner.$(http().client("http://localhost:2222")
+        runner.$(http().client(yellowDuckService)
                 .send()
                 .get("/api/duck/action/swim")
                 .queryParam("id", id));
@@ -37,16 +27,16 @@ public class DuckActionsTest extends TestNGCitrusSpringSupport {
 
     //валидация ответа
     public void validateResponse(TestCaseRunner runner, String responseMessage) {
-        runner.$(http().client("http://localhost:2222")
+        runner.$(http().client(yellowDuckService)
                 .receive()
                 .response(HttpStatus.OK)
                 .message()
                 .contentType(MediaType.APPLICATION_JSON_VALUE).body(responseMessage));
     }
 
-   //создание утки
+    //создание утки
     public void createDuck(TestCaseRunner runner, String color, double height, String material, String sound, String wingsState) {
-        runner.$(http().client("http://localhost:2222")
+        runner.$(http().client(yellowDuckService)
                 .send()
                 .post("/api/duck/create")
                 .message()
@@ -58,4 +48,5 @@ public class DuckActionsTest extends TestNGCitrusSpringSupport {
                         + "  \"wingsState\": \"" + wingsState
                         + "\"\n" + "}"));
     }
+
 }
